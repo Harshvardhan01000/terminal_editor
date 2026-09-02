@@ -8,10 +8,14 @@
 
 #include <termios.h>
 
+#include <ctype.h>
+
 #include <errno.h>
 #include <string.h>
 
 #define TERM_ERR(message, ...) fprintf(stderr, message "\n", __VA_ARGS__)
+
+#define NEW_LINE "\r\n"
 
 struct termios og_state;
 
@@ -60,6 +64,7 @@ void start_editor(pane *d) {
 }
 
 void exit_raw_mode() {
+  printf("\033[2J\033[H"); // NOTE::clear screen and move to home
   if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &og_state) == -1)
     TERM_ERR("Error tcsetattr : %d", errno);
 }
@@ -72,37 +77,53 @@ void init_raw_mode() {
   atexit(exit_raw_mode);
 
   struct termios raw = og_state;
+  raw.c_iflag &=
+      ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON); // NOTE: following dogma
+  raw.c_iflag &= ~(IXON | ICRNL);                // NOTE: turn of C-s and C-q
+  raw.c_oflag &= ~(OPOST);                       // NOTE: turn of \n and \r\n
+  raw.c_lflag &=
+      ~(ICANON | ECHO | ISIG | IEXTEN); // NOTE: turn of C-c and C-z by ISIG
 
-  raw.c_lflag &= ~(ICANON | ECHO);
+  raw.c_cc[VMIN] = 0;  // NOTE: set byte for input
+  raw.c_cc[VTIME] = 1; // NOTE: set time for input
 
   if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) == -1)
     TERM_ERR("Error tcsetattr : %d", errno);
 }
 
 int main() {
-  struct winsize ws;
-  struct termios raw;
+  // struct winsize ws;
 
   init_raw_mode();
 
-  if (ioctl(STDIN_FILENO, TIOCGWINSZ, &ws) != 0 &&
-      ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) != 0 &&
-      ioctl(STDERR_FILENO, TIOCGWINSZ, &ws) != 0) {
-    fprintf(stderr, "ioctl() failed (%d): %s\n", errno, strerror(errno));
-    return 0;
+  // if (ioctl(STDIN_FILENO, TIOCGWINSZ, &ws) != 0 &&
+  //     ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) != 0 &&
+  //     ioctl(STDERR_FILENO, TIOCGWINSZ, &ws) != 0) {
+  //   fprintf(stderr, "ioctl() failed (%d): %s\n", errno, strerror(errno));
+  //   return 0;
+  // }
+  // size_t height = ws.ws_row;
+  // size_t width = ws.ws_col;
+  // char *screen = malloc(height * width * sizeof(char));
+  // pane display = {screen, height, width, height, width};
+  //
+  // init_screen(&display);
+  //
+  // start_editor(&display);
+
+  // free(screen);
+
+  while (1) {
+    char c;
+    read(STDIN_FILENO, &c, sizeof(c));
+    if (iscntrl(c)) {
+      printf("%d" NEW_LINE, c);
+    } else {
+      printf("%d ('%c')" NEW_LINE, c, c);
+    }
+    if (c == 'q')
+      break;
   }
-  size_t height = ws.ws_row;
-  size_t width = ws.ws_col;
-  char *screen = malloc(height * width * sizeof(char));
-  pane display = {screen, height, width, height, width};
-
-  init_screen(&display);
-
-  start_editor(&display);
-
-  sleep(10);
-
-  free(screen);
 
   return 0;
 }
