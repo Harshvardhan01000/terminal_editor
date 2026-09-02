@@ -11,6 +11,10 @@
 #include <errno.h>
 #include <string.h>
 
+#define TERM_ERR(message, ...) fprintf(stderr, message "\n", __VA_ARGS__)
+
+struct termios og_state;
+
 typedef struct screen {
   char *screen_buffer;
   size_t height;
@@ -37,30 +41,49 @@ void init_screen(pane *d) {
 
   printf("%s", d->screen_buffer);
   free(index);
+  fflush(stdout);
 }
 
 void start_editor(pane *d) {
-  // while (1) {
+  (void *)d;
+  printf("BEFORE\n");
+
+  printf("\033[1;1H");
+  printf("\033[?25h");
+
   char c;
+  while (1) {
+    read(STDIN_FILENO, &c, sizeof(c));
+    printf("%c", c);
+    fflush(stdout);
+  }
+}
 
-  read(STDIN_FILENO, &c, 1);
-  strncpy(d->screen_buffer + (d->height * d->width), &c, 1);
+void exit_raw_mode() {
+  if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &og_state) == -1)
+    TERM_ERR("Error tcsetattr : %d", errno);
+}
 
-  printf("\033[H"); // move cursor to home
-  printf("%s", d->screen_buffer);
-  fflush(stdout);
-  // }
+void init_raw_mode() {
+
+  if (tcgetattr(STDIN_FILENO, &og_state) == -1)
+    TERM_ERR("Error tcgetattr : %d", errno);
+
+  atexit(exit_raw_mode);
+
+  struct termios raw = og_state;
+
+  raw.c_lflag &= ~(ICANON | ECHO);
+
+  if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) == -1)
+    TERM_ERR("Error tcsetattr : %d", errno);
 }
 
 int main() {
   struct winsize ws;
   struct termios raw;
-  struct termios last_state;
 
-  tcgetattr(STDIN_FILENO, &raw);
-  last_state = raw;
-  raw.c_lflag &= ~(ICANON | ECHO);
-  tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
+  init_raw_mode();
 
   if (ioctl(STDIN_FILENO, TIOCGWINSZ, &ws) != 0 &&
       ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) != 0 &&
@@ -77,8 +100,9 @@ int main() {
 
   start_editor(&display);
 
+  sleep(10);
+
   free(screen);
 
-  tcsetattr(STDIN_FILENO, TCSAFLUSH, &last_state);
   return 0;
 }
