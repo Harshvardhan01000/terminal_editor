@@ -1,4 +1,5 @@
 #include "input/key_processing.h"
+#include "term_text_editor.h"
 #include "termios/termios_control.h"
 
 struct editor_config E;
@@ -21,7 +22,8 @@ int main() {
   // start_editor(&display);
 
   // free(screen);
-  init_editor(&E);
+  init_editor();
+  SAVE_CURSOR
   REFRESH_SCREEN
   editor_draw_rows(E.row);
   CURSOR_TOP

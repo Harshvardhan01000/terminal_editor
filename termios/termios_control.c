@@ -11,7 +11,9 @@
 extern struct editor_config E;
 
 void exit_raw_mode() {
-  printf("\033[2J\033[H"); // NOTE:clear screen and move to home
+  // printf("\033[2J\033[H"); // NOTE:clear screen and move to home
+  RETURN_TO_MAIN_BUFFER
+  RESTORE_CURSOR
   if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &E.og_state) == -1)
     TERM_ERR("Error tcsetattr : %d", errno);
 }

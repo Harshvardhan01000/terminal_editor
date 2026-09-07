@@ -18,7 +18,8 @@ void editor_process_key() {
   char c = editor_read_key();
   switch (c) {
   case CTRL_KEY('q'):
-    REFRESH_SCREEN
+    RETURN_TO_MAIN_BUFFER
+    RESTORE_CURSOR
     exit(0);
     break;
   }
