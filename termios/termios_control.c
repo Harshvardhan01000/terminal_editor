@@ -56,6 +56,8 @@ int get_window_size(size_t *row, size_t *col) {
 }
 
 void init_editor() {
+  E.cx = 0;
+  E.cy = 0;
   init_raw_mode();
   if (get_window_size(&E.row, &E.col) == -1) {
     TERM_ERR("error get_window_size : %d", errno)

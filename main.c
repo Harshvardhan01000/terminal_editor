@@ -25,8 +25,7 @@ int main() {
   init_editor();
   SAVE_CURSOR
   REFRESH_SCREEN
-  editor_draw_rows(E.row);
-  CURSOR_TOP
+  editor_refresh_screen();
   while (1)
     editor_process_key();
 

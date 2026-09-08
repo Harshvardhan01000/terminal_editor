@@ -1,8 +1,12 @@
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 
 #include <string.h>
+#include <unistd.h>
+
+#include "term_text_editor.h"
 
 // typedef struct screen {
 //   char *screen_buffer;
@@ -10,11 +14,56 @@
 //   size_t width;
 // } pane;
 
-void editor_draw_rows(size_t row) {
-  int y;
-  for (y = 0; y < row; y++) {
-    write(STDOUT_FILENO, "~\r\n", 3);
+extern struct editor_config E;
+
+void editor_draw_rows(buf *ab) {
+  size_t y;
+  for (y = 0; y < E.row; y++) {
+    ab_append(ab, "~", 1);
+    if (y == E.row / 3) {
+      size_t new_size = E.col - 1;
+      char welcome[80];
+
+      size_t welcomelen =
+          snprintf(welcome, sizeof(welcome),
+                   "HELLO TO MY VIM CLONE VERSION : %1.1f", __TERM_VERSION__);
+
+      if (welcomelen > new_size)
+        welcomelen = new_size;
+
+      char title[new_size];
+
+      memset(title, ' ', new_size);
+
+      int mid = (new_size - welcomelen) / 2;
+
+      memcpy(title + mid, welcome, welcomelen);
+
+      ab_append(ab, title, new_size - 2);
+    }
+
+    ab_append(ab, "\x1b[K", 3);
+    if (y < E.row - 1)
+      ab_append(ab, "\r\n", 2);
   }
+}
+
+void editor_refresh_screen() {
+  buf ab = ABUF_INIT;
+
+  ab_append(&ab, "\x1b[?25l", 6);
+  // ab_append(&ab, "\x1b[2J", 4);
+  ab_append(&ab, "\x1b[H", 3);
+
+  editor_draw_rows(&ab);
+
+  char buf[32];
+  snprintf(buf, sizeof(buf), "\x1b[%d;%dH", E.cy + 1, E.cx + 1);
+  ab_append(&ab, buf, strlen(buf));
+  ab_append(&ab, "\x1b[?25h", 6);
+  write(STDOUT_FILENO, ab.b, ab.len);
+
+  ab_free(&ab);
 }
 
 // void init_screen(pane *d) {

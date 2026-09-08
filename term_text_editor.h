@@ -1,11 +1,13 @@
 #ifndef TERM_TEXT_EDITOR
 #define TERM_TEXT_EDITOR 1
 
+#include "buffer.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <termios.h>
 #include <unistd.h>
 
+#define __TERM_VERSION__ 0.1
 #define TERM_ERR(message, ...)                                                 \
   do {                                                                         \
     REFRESH_SCREEN                                                             \
@@ -38,11 +40,12 @@
 #define CTRL_KEY(k) ((k) & 0x1f)
 
 struct editor_config {
+  int cx, cy;
   size_t row;
   size_t col;
   struct termios og_state;
 };
 
-void editor_draw_rows(size_t row);
+void editor_refresh_screen();
 
 #endif /* terminal.h  */
