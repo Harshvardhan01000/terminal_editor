@@ -1,5 +1,6 @@
 #include <errno.h>
 #include <stddef.h>
+#include <string.h>
 #include <unistd.h>
 
 #include "../term_text_editor.h"
@@ -51,7 +52,9 @@ void editor_process_key() {
   case 'k':
   case 'l':
     editor_move_cursor(c);
-    editor_refresh_screen();
+    char buf[32];
+    snprintf(buf, sizeof(buf), "\x1b[%d;%dH", E.cy + 1, E.cx + 1);
+    write(STDOUT_FILENO, buf, strlen(buf));
     break;
   }
 }
